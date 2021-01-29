@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 
 	flag.Parse()
 	if inputUrl == "" {
-		log.Fatal("url is required")
+		log.Fatal("url is not required")
 	}
 
 	if outputFile == "" {
@@ -29,11 +30,22 @@ func main() {
 	}
 
 	// received file from server
-	resp, err := http.Get(inputUrl)
+	client := http.Client{}
+	req, err := http.NewRequest("GET", inputUrl, nil)
+	
+	expiration := time.Now().Add(365 * 24 * time.Hour)
+	cookie := http.Cookie{Name: "cookie_name",Value:"value",Expires:expiration, Path: "/"}
+	req.AddCookie(&cookie)
+	cookie2 := http.Cookie{Name: "cookie_name2",Value:"value2",Expires:expiration, Path: "/"}
+	req.AddCookie(&cookie2)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal("Download error: ", err)
 	}
 	defer resp.Body.Close()
+	//bodyBytes, err := ioutil.ReadAll(resp.Body)
+	//log.Printf(string(bodyBytes))
 
 	// create output file
 	f, err := os.Create(outputFile)
@@ -48,10 +60,11 @@ func main() {
 	for scanner.Scan() {
 		l := scanner.Text()
 
+		log.Printf(l)
 		// if line contains url address
-		if strings.HasPrefix(l, "http") {
+		if strings.HasPrefix(l, "some prefix") {
 			// download file part
-			part, err := downloadFilePart(l)
+			part, err := downloadFilePart("base url" + l)
 			if err != nil {
 				log.Fatal("Download part error: ", err)
 			}
@@ -72,9 +85,16 @@ func main() {
 
 //downloadFilePart download file part from server
 func downloadFilePart(url string) ([]byte, error) {
+	log.Printf(string(url))
 	result := make([]byte, 0)
 
-	resp, err := http.Get(url)
+	client := http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	expiration := time.Now().Add(365 * 24 * time.Hour)
+	cookie := http.Cookie{Name: "cookie_name",Value:"value",Expires:expiration, Path: "/"}
+	req.AddCookie(&cookie)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return result, err
 	}
